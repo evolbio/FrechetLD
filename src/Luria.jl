@@ -1,11 +1,13 @@
 module Luria
-using Distributions, CSV, DataFrames, StatsBase, Integrals, Optimization, Optim, Plots
+using Distributions, CSV, DataFrames, StatsBase, Integrals, Optimization, OptimizationOptimJL, 
+		Plots
 export read_salvador, opt_param, plot_cdf
 
-function read_salvador(param="5_6_9")
-	dir = "/Users/steve/text/Submit/Luria/Analysis/LuriaFit/salvadorOutput"
-	run(`unzip $dir`);
-	df = CSV.read("salvadorOutput/ld_"*param*".csv", DataFrame);
+# file is e.g., "6_7_10"
+function read_salvador(file)
+	zipf = "/Users/steve/text/Submit/Luria/Analysis/LuriaFit/salvadorOutput"
+	run(`unzip $zipf`);
+	df = CSV.read("salvadorOutput/ld_"*file*".csv", DataFrame);
 	rm("salvadorOutput", recursive=true)
 	rm("__MACOSX", recursive=true)
 	return df[:,2]
@@ -23,19 +25,23 @@ function callback(p, lossval)
 	return false
 end
 
-function opt_param(upperb)
-	data = read_salvador();
-	pp = [1.3, 2e4, 6e4]	# for 5_5_9
-	pp = [1.3, 2e3, 6e3]	# for 5_6_9
-	prob = OptimizationProblem((p,x) -> opt(p, data, upperb), pp, ones(3))
-	solve(prob, NelderMead(), reltol=1e-3, callback=callback)
+# file is param for read_salvador, e.g., "6_7_10"
+function opt_param(file, N, u; tol=1e-3)
+	data = read_salvador(file);
+	pp = [1.32, 2.7*N*u, log(N*u) - 2.35]
+	prob = OptimizationProblem((p,x) -> opt(p, data, N), pp, ones(3))
+	solve(prob, NelderMead(), reltol=tol, callback=callback)
 end
 
-function plot_cdf(p_fr::Vector{Float64}, lb::Float64, ub::Float64)
-	data = read_salvador();
+function plot_cdf(file, p_fr::Vector{Float64}, Nu::Float64, lb::Float64, ub::Float64)
+	data = read_salvador(file);
 	emp = ecdf(data)
 	plt=plot(x->emp(x),lb,ub,xaxis=:log)
-	plot!(x->cdf(Frechet(p_fr[1], p_fr[2]), x-p_fr[3]),lb,ub,xaxis=:log)
+	#plot!(x->cdf(Frechet(p_fr[1], p_fr[2]), x-p_fr[3]),lb,ub,xaxis=:log)
+	e = MathConstants.e
+	pp = [e/2, e*Nu, Nu*(log(Nu) - 2.35)]
+	#pp = [e/2, e*Nu, Nu*(log(Nu) - 2.35)]
+	plot!(x->cdf(Frechet(pp[1], pp[2]), x-pp[3]),lb,ub,xaxis=:log)
 	display(plt)
 	return plt
 end
