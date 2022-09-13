@@ -3,7 +3,13 @@ using Distributions, CSV, DataFrames, StatsBase, Integrals, Optimization, Optimi
 		Plots
 export read_salvador, opt_param, plot_cdf, plot_diff, plot_all
 
-# file is e.g., "6_7_10"
+# To use, obtain file salvadorOutput.zip for Zenodo at
+
+# Reset location of salvadorOutput.zip file as needed
+# Unzip zipfile, reads file ls_FILE.csv, returns array with data, deletes unzipped files
+# FILE is e.g., "6_7_10" in which 6 => 10^6 samples, 7 => 10^-7 mutation (u), and
+#		10 => 10^10 final population (N)
+# In most cases do not call this directly.
 function read_salvador(file)
 	zipf = "/Users/steve/text/Submit/Luria/Analysis/LuriaFit/salvadorOutput"
 	run(`unzip $zipf`);
@@ -13,6 +19,8 @@ function read_salvador(file)
 	return df[:,2]
 end
 
+# Loss function, could use maximum difference instead of summed squared deviations
+# or other loss function. Not called directly.
 function opt(p, data, upperb)
 	emp = ecdf(data)
 	prob = IntegralProblem((x,pp) ->
@@ -20,12 +28,16 @@ function opt(p, data, upperb)
 	solve(prob,HCubatureJL())
 end
 
+# Some printing to show progress of numerical optimization of parameters
 function callback(p, lossval)
 	println("p = ", p, "; loss = ", lossval)
 	return false
 end
 
-# file is param for read_salvador, e.g., "6_7_10"
+# Call this function to find an optimized fit of parameters to simulated
+# distribution data. N and u must match the values used for the simulation.
+# file is param for read_salvador, e.g., "6_7_10", for which N=10^10 and u = 10^-7
+# returns numerically optimized fit for parameters of frechet
 function opt_param(file, N, u; tol=1e-3)
 	data = read_salvador(file);
 	pp = [1.32, 2.7*N*u, log(N*u) - 2.35]
@@ -33,7 +45,10 @@ function opt_param(file, N, u; tol=1e-3)
 	solve(prob, NelderMead(), reltol=tol, callback=callback)
 end
 
-
+# plots the empirical CDF of the simulated data vs the optimized Frechet fit
+# p_fr is optimized frechet parameter vector for shape, scale, and location
+# pass in as for example [1.36, 271.0, 34.8]
+# Nu = N*u, lb,ub are lower and upper bound for plotting, e.g., 1e4, 1e6 for Nu=1e4
 function plot_cdf(file, p_fr::Vector{Float64}, Nu::Float64, lb::Float64, ub::Float64)
 	data = read_salvador(file);
 	emp = ecdf(data)
@@ -46,6 +61,8 @@ function plot_cdf(file, p_fr::Vector{Float64}, Nu::Float64, lb::Float64, ub::Flo
 	return plt
 end
 
+# plots empirical CDF vs Frechet using single parameter Nu to calculate the theoretical
+# values for Frechet parameters given in the article 
 function plot_cdf(file, Nu::Float64; lb::Float64=Nu, ub::Float64=Nu*100.,
 			disp=true, xlabel=:none)
 	data = read_salvador(file);
@@ -60,6 +77,7 @@ function plot_cdf(file, Nu::Float64; lb::Float64=Nu, ub::Float64=Nu*100.,
 	return plt
 end
 
+# plots for a range of Nu values, used to produce figure in article
 function plot_all()
 	files = ["7_10_10", "7_9_10", "6_8_10", "6_7_10", "6_6_10"]
 	Nu_list = [1e0, 1e1, 1e2, 1e3, 1e4]
@@ -74,6 +92,7 @@ function plot_all()
 	return final
 end
 
+# plots difference between empirical CDF and Frechet approximation, shows mismatch
 function plot_diff(file, Nu::Float64; lb::Float64=Nu, ub::Float64=Nu*10.)
 	data = read_salvador(file);
 	emp = ecdf(data)
