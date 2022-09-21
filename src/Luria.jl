@@ -55,7 +55,10 @@ function plot_cdf(file, p_fr::Vector{Float64}, Nu::Float64, lb::Float64, ub::Flo
 	plt=plot(x->emp(x),lb,ub,xaxis=:log)
 	plot!(x->cdf(Frechet(p_fr[1], p_fr[2]), x-p_fr[3]),lb,ub,xaxis=:log)
 	e = MathConstants.e
-	pp = [e/2, e*Nu, Nu*(log(Nu) - 2.35)]
+	# using 1+alpha = 1+e/2 does not change visual fit
+	# pp = [e/2, e*Nu, Nu*(log(Nu) - 2.35)] 	# original estimate 2.35
+	pp = [e/2, e*Nu, Nu*(log(Nu) - (1+e/2))]	# new guess, (1+e/2) approx 2.359
+	pp = [e/2, e*Nu, Nu*log(Nu*e^(- (1+e/2)))]	# rewritten in more elegant form
 	plot!(x->cdf(Frechet(pp[1], pp[2]), x-pp[3]),lb,ub,xaxis=:log)
 	display(plt)
 	return plt
