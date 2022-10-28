@@ -6,7 +6,7 @@ Frank, S. A. 2022. The number of neutral mutants in an expanding Luria-Delbrück
 
 by Steven A. Frank, https://stevefrank.org
 
-[License CC-By 4.0](https://creativecommons.org/licenses/by/4.0/)
+[MIT License](https://opensource.org/licenses/MIT)
 
 ---
 
